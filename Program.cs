@@ -41,7 +41,18 @@ namespace OrderingSystem
                         deleteDish();
                         break;
                     case "5":
-                        printMenu();
+                        string menu = "Меню:";
+                        int countDishes;
+                        int countCategories = 0;
+                        if (dishes.Count == 0)
+                        {
+                            printMenu(in menu, out countDishes, ref countCategories, 0);
+                        }
+                        else
+                        {
+                            printMenu(in menu, out countDishes, ref countCategories);
+                        }
+                        Console.WriteLine($"Всего блюд: {countDishes}, Всего категорий: {countCategories}");
                         break;
                     case "6":
                         createOrder();
@@ -146,15 +157,23 @@ namespace OrderingSystem
             Console.WriteLine("Блюдо успешно удалено из меню!");
         }
 
-        static void printMenu()
+        static void printMenu(in string menu, out int count, ref int countCategories, params int[] n)
         {
+            count = 0;
+            if (n.Length > 0)
+            {
+                Console.Write("В меню нет блюд!");
+                return;
+            }
+            Console.WriteLine(menu);
             var groupedDishes = dishes.Values.GroupBy(dish => dish.category);
-            Console.WriteLine("Меню:");
             foreach (var group in groupedDishes)
             {
+                countCategories++;
                 Console.WriteLine($"{group.Key}:");
                 foreach (var dish in group)
                 {
+                    count++;
                     Console.WriteLine($"ID: {dish.id} Название: {dish.name}");
                 }
             }
@@ -205,30 +224,37 @@ namespace OrderingSystem
         {
             Console.Write("Введите ID заказа: ");
             Order orderToEdit = orders[Convert.ToInt32(Console.ReadLine())];
-            Console.Write("Введите ID новых блюд через пробел: ");
-            string input = Console.ReadLine();
-            // Разделяем ввод на числа
-            int[] dishIds = input.Split(' ').Select(int.Parse).ToArray();
-
-            // Создаем массив блюд
-            Dish[] selectedDishes = new Dish[dishIds.Length];
-
-            // Извлекаем блюда из словаря и добавляем в массив
-            for (int i = 0; i < dishIds.Length; i++)
+            if (orderToEdit.closedTime == null)
             {
-                if (dishes.ContainsKey(dishIds[i]))
+                Console.Write("Введите ID новых блюд через пробел: ");
+                string input = Console.ReadLine();
+                // Разделяем ввод на числа
+                int[] dishIds = input.Split(' ').Select(int.Parse).ToArray();
+
+                // Создаем массив блюд
+                Dish[] selectedDishes = new Dish[dishIds.Length];
+
+                // Извлекаем блюда из словаря и добавляем в массив
+                for (int i = 0; i < dishIds.Length; i++)
                 {
-                    selectedDishes[i] = dishes[dishIds[i]];
+                    if (dishes.ContainsKey(dishIds[i]))
+                    {
+                        selectedDishes[i] = dishes[dishIds[i]];
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Блюда с ID {dishIds[i]} не найдено.");
+                    }
                 }
-                else
-                {
-                    Console.WriteLine($"Блюда с ID {dishIds[i]} не найдено.");
-                }
+                Console.Write("Введите новый комментарий: ");
+                string comment = Console.ReadLine();
+                orderToEdit.edit(selectedDishes, comment);
+                Console.WriteLine("Ваш заказ успешно отредактирован!");
             }
-            Console.Write("Введите новый комментарий: ");
-            string comment = Console.ReadLine();
-            orderToEdit.edit(selectedDishes, comment);
-            Console.WriteLine("Ваш заказ успешно отредактирован!");
+            else
+            {
+                Console.WriteLine("Заказ уже закрыт, редактировать нельзя!");
+            }
         }
 
         static void printOrderInfo()
@@ -272,12 +298,12 @@ namespace OrderingSystem
             int waiter = Convert.ToInt32(Console.ReadLine());
             foreach (KeyValuePair<int, Order> order in orders)
             {
-                if (order.Value.waiter == waiter)
+                if (order.Value.waiter == waiter && order.Value.closedTime != null)
                 {
-                    totalSum += order.Value.CalculateTotal();
+                    totalSum++;
                 }
             }
-            Console.WriteLine($"Стоимость всех закрытых заказов этого официанта: {totalSum}");
+            Console.WriteLine($"Количество закрытых заказов этого официанта: {totalSum}");
         }
 
         static void dishStatistics()
@@ -286,16 +312,19 @@ namespace OrderingSystem
             int totalDishes = 0; // Общее количество заказанных блюд
             foreach (var order in orders.Values)
             {
-                foreach (var dish in order.dishes)
+                if (order.closedTime != null)
                 {
-                    totalDishes++; // Увеличиваем счетчик заказов
-                    if (dishCounts.ContainsKey(dish.id))
+                    foreach (var dish in order.dishes)
                     {
-                        dishCounts[dish.id]++;
-                    }
-                    else
-                    {
-                        dishCounts.Add(dish.id, 1);
+                        totalDishes++; // Увеличиваем счетчик заказов
+                        if (dishCounts.ContainsKey(dish.id))
+                        {
+                            dishCounts[dish.id]++;
+                        }
+                        else
+                        {
+                            dishCounts.Add(dish.id, 1);
+                        }
                     }
                 }
             }
