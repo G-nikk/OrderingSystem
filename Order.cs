@@ -78,18 +78,39 @@ namespace OrderingSystem
         {
             if (closedTime != null)
             {
-                Console.WriteLine("-----------------------------------");
-                Console.WriteLine($"Чек №{id}");
-                Console.WriteLine($"Веремя открытия: {creationTime}");
-                Console.WriteLine($"Время закрытия: {closedTime}");
-                Console.WriteLine("-----------------------------------");
-                foreach (Dish dish in dishes)
+                var dishCounts = dishes.GroupBy(d => d.name)
+                             .ToDictionary(g => g.Key, g => g.Count());
+
+                Console.WriteLine($"Столик: {tableId}");
+                Console.WriteLine($"Официант: {waiter}");
+                Console.WriteLine($"Период обслуживания: с {creationTime} по {closedTime}");
+                Console.WriteLine();
+
+                var categoryTotals = new Dictionary<Category, double>();
+
+                foreach (var category in Enum.GetValues(typeof(Category)).Cast<Category>())
                 {
-                    Console.WriteLine($"{dish.name} x {dish.weight}г - {dish.price}");
+                    var dishesInCategory = dishes.Where(d => d.category == category).GroupBy(x => x.name).Select(x => new { Name = x.Key, Count = x.Count(), Price = x.First().price }).ToArray();
+
+                    if (dishesInCategory.Length > 0)
+                    {
+                        Console.WriteLine($"{category}:");
+                        double categorySum = 0;
+                        foreach (var dish in dishesInCategory)
+                        {
+                            double itemTotal = dish.Count * dish.Price;
+                            Console.WriteLine($"{dish.Name}\t\t{dish.Count}*{dish.Price}={itemTotal}");
+                            categorySum += itemTotal;
+                        }
+                        Console.WriteLine($"\t\tПод-итог категории: {categorySum}");
+                        categoryTotals[category] = categorySum;
+                        Console.WriteLine();
+                    }
                 }
-                Console.WriteLine("-----------------------------------");
-                Console.WriteLine($"Итого: {total}");
-                Console.WriteLine("-----------------------------------");
+
+                double grandTotal = categoryTotals.Sum(x => x.Value);
+                Console.WriteLine($"Итог счета: {grandTotal}");
+                Console.WriteLine("*************************************************");
             }
             else
             {
